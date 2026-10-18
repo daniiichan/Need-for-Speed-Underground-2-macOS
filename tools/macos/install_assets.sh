@@ -6,21 +6,33 @@ set -e
 # Author: daniiichan
 # ==============================================================================
 
-DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$DIR"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_NAME="Need for Speed Underground 2.app"
+
+if [ -d "$SCRIPT_DIR/$APP_NAME" ]; then
+    APP="$SCRIPT_DIR/$APP_NAME"
+    cd "$SCRIPT_DIR"
+elif [ -d "$SCRIPT_DIR/../../$APP_NAME" ]; then
+    APP="$SCRIPT_DIR/../../$APP_NAME"
+    cd "$SCRIPT_DIR/../.."
+elif [ -d "$APP_NAME" ]; then
+    APP="$APP_NAME"
+else
+    echo "⚠️  $APP_NAME not found!"
+    if [ -f "$SCRIPT_DIR/bundle.sh" ]; then
+        "$SCRIPT_DIR/bundle.sh"
+        APP="Need for Speed Underground 2.app"
+    else
+        echo "❌ Cannot find or build $APP_NAME. Please ensure it is present."
+        exit 1
+    fi
+fi
 
 echo "=========================================================="
 echo "🏎️  Need for Speed: Underground 2 — Asset Installer"
 echo "=========================================================="
 echo ""
-
-APP="Need for Speed Underground 2.app"
-
-if [ ! -d "$APP" ]; then
-    echo "⚠️  $APP not found in current directory!"
-    echo "Running bundle script to build it first..."
-    ./tools/macos/bundle.sh
-fi
+echo "Target Application: $APP"
 
 SOURCE_DIR="$1"
 

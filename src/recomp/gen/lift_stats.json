@@ -1,0 +1,52 @@
+{
+ "functions": 27742,
+ "files": 70,
+ "c_lines": 9001374,
+ "lift_failures": 0,
+ "failures": [],
+ "unimplemented_total": 2910,
+ "unimplemented": {
+  "3dnow": 2890,
+  "int": 17,
+  "override": 2,
+  "excluded:": 1
+ },
+ "unimplemented_sites": {
+  "int": [
+   "0055FF54",
+   "00769DBA",
+   "00769DC5",
+   "00769DFE",
+   "00769E19",
+   "00769E8E",
+   "00769EAD",
+   "00769F32",
+   "00769F51",
+   "00769FD6"
+  ],
+  "3dnow": [
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C",
+   "0068E67C"
+  ],
+  "excluded:": [
+   "006D5610"
+  ],
+  "override": [
+   "006F5FC5",
+   "0075CFD0"
+  ]
+ },
+ "overridden": 2,
+ "excluded": 1,
+ "icall_sites": 13271,
+ "itail_sites": 3110,
+ "seconds": 73
+}

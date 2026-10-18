@@ -12,7 +12,7 @@ endif()
 list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew")
 
 set(NFS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
-set(PORT "${NFS_ROOT}/android/app/src/main/cpp")
+set(PORT "${NFS_ROOT}/src/guest")
 
 if(EXISTS "${NFS_ROOT}/third_party/pcrecomp/runtime")
   set(RT "${NFS_ROOT}/third_party/pcrecomp/runtime")
@@ -31,7 +31,7 @@ endif()
 set(DXVK_HOST_HEADLESS OFF)
 set(DXVK_SOURCE "${DXVK_SOURCE}" CACHE PATH "Prepared DXVK native source" FORCE)
 set(DXVK_ANDROID_STATIC ON CACHE BOOL "Static DXVK" FORCE)
-add_subdirectory("${NFS_ROOT}/ports/dxvk_android" "${CMAKE_CURRENT_BINARY_DIR}/dxvk")
+add_subdirectory("${NFS_ROOT}/ports/dxvk" "${CMAKE_CURRENT_BINARY_DIR}/dxvk")
 
 file(GLOB GEN_SOURCES "${GEN_DIR}/recomp_*.c")
 if(NOT GEN_SOURCES)
@@ -86,7 +86,7 @@ target_compile_definitions(NFSU2-macOS PRIVATE
 )
 
 target_link_libraries(NFSU2-macOS PRIVATE
-  dxvk_android
+  dxvk_wsi
   ${VULKAN_LIB}
   SDL2::SDL2
   pthread

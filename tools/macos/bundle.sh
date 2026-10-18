@@ -33,9 +33,9 @@ cp "$BUILD_DIR/NFSU2-macOS" "$APP/Contents/MacOS/NFSU2-macOS"
 chmod +x "$APP/Contents/MacOS/NFSU2-macOS"
 
 # 4. Generate AppIcon.icns
-SRC_ICON="ICONO/ICONO.png"
+SRC_ICON="resources/AppIcon.png"
 if [ ! -f "$SRC_ICON" ]; then
-    SRC_ICON="../ICONO/ICONO.png"
+    SRC_ICON="../resources/AppIcon.png"
 fi
 
 if [ -f "$SRC_ICON" ]; then

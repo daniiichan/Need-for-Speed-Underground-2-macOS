@@ -1,5 +1,0 @@
-cmake_minimum_required(VERSION 3.20)
-project(NFSU2FilesCheck CXX)
-add_executable(files_check files_check.cpp)
-target_include_directories(files_check PRIVATE ../../android/app/src/main/cpp)
-target_compile_features(files_check PRIVATE cxx_std_17)

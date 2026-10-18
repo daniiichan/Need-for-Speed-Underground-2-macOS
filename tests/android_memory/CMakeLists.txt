@@ -1,6 +1,0 @@
-cmake_minimum_required(VERSION 3.20)
-project(NFSU2MemoryCheck CXX)
-add_executable(memory_check memory_check.cpp)
-target_include_directories(memory_check PRIVATE ../../android/app/src/main/cpp)
-target_compile_features(memory_check PRIVATE cxx_std_17)
-target_compile_options(memory_check PRIVATE -Wall -Wextra -Werror)

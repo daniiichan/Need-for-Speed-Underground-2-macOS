@@ -1,6 +1,3 @@
-# --- Never commit game material or anything derived from SPEED2.EXE ---
-# Generated C lifted from the binary (a derivative of proprietary code)
-src/recomp/gen/
 # Build output
 build/
 # Run logs and crash dumps (contain guest memory/addresses)

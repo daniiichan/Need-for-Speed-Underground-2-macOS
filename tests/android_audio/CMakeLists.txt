@@ -1,6 +1,0 @@
-cmake_minimum_required(VERSION 3.20)
-project(NFSU2AudioCheck CXX)
-add_executable(mixer_check mixer_check.cpp)
-target_include_directories(mixer_check PRIVATE ../../android/app/src/main/cpp)
-target_compile_features(mixer_check PRIVATE cxx_std_17)
-target_compile_options(mixer_check PRIVATE -Wall -Wextra -Werror)

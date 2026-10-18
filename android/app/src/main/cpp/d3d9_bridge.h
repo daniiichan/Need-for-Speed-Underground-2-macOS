@@ -1,6 +1,11 @@
 #pragma once
 #include <cstdint>
+#if defined(__APPLE__)
+struct SDL_Window;
+typedef struct SDL_Window ANativeWindow;
+#else
 struct ANativeWindow;
+#endif
 void configureD3D9Bridge(void* guestBase,uint32_t (*allocator)(uint32_t),void (*deallocator)(uint32_t));
 void shutdownD3D9Bridge();
 void setD3D9HostWindow(ANativeWindow* window);

@@ -1,0 +1,104 @@
+cmake_minimum_required(VERSION 3.22)
+project(NFSU2_macOS C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+
+if(NOT APPLE)
+  message(FATAL_ERROR "This CMake configuration is for macOS Apple Silicon / Intel")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew")
+
+set(NFS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PORT "${NFS_ROOT}/android/app/src/main/cpp")
+
+if(EXISTS "${NFS_ROOT}/third_party/pcrecomp/runtime")
+  set(RT "${NFS_ROOT}/third_party/pcrecomp/runtime")
+else()
+  set(RT "${NFS_ROOT}/../pcrecomp/runtime")
+endif()
+
+set(GEN_DIR "${NFS_ROOT}/src/recomp/gen")
+
+if(EXISTS "${NFS_ROOT}/third_party/dxvk-source")
+  set(DXVK_SOURCE "${NFS_ROOT}/third_party/dxvk-source")
+else()
+  set(DXVK_SOURCE "${NFS_ROOT}/build/dxvk-source")
+endif()
+
+set(DXVK_HOST_HEADLESS OFF)
+set(DXVK_SOURCE "${DXVK_SOURCE}" CACHE PATH "Prepared DXVK native source" FORCE)
+set(DXVK_ANDROID_STATIC ON CACHE BOOL "Static DXVK" FORCE)
+add_subdirectory("${NFS_ROOT}/ports/dxvk_android" "${CMAKE_CURRENT_BINARY_DIR}/dxvk")
+
+file(GLOB GEN_SOURCES "${GEN_DIR}/recomp_*.c")
+if(NOT GEN_SOURCES)
+  message(FATAL_ERROR "No generated sources in ${GEN_DIR}!")
+endif()
+
+add_library(nfs_guest OBJECT ${GEN_SOURCES})
+target_include_directories(nfs_guest PRIVATE
+  "${RT}/recomp32"
+  "${GEN_DIR}"
+)
+target_compile_definitions(nfs_guest PRIVATE
+  RECOMP_STRICT_ICALL
+  RECOMP_LOCAL_REGS
+  RECOMP_X87_WINDOW
+  "RECOMP_MEM_QUAL="
+)
+target_compile_options(nfs_guest PRIVATE
+  -O2 -w -fwrapv -fno-strict-aliasing -fexceptions -ffp-contract=off
+  -include "${PORT}/arm64_guest.h"
+  -g0 -fvisibility=hidden
+)
+
+find_package(SDL2 REQUIRED)
+find_library(VULKAN_LIB NAMES vulkan libvulkan.dylib PATHS /opt/homebrew/lib REQUIRED)
+
+add_executable(NFSU2-macOS
+  src/host/main_macos.cpp
+  "${PORT}/guest_runtime.cpp"
+  "${PORT}/d3d9_bridge.cpp"
+  src/runtime/overrides.c
+  src/runtime/widescreen.c
+  $<TARGET_OBJECTS:nfs_guest>
+)
+
+target_include_directories(NFSU2-macOS PRIVATE
+  "${PORT}"
+  "${RT}/recomp32"
+  "${RT}/win32hle"
+  src/runtime
+  src/platform
+  "${GEN_DIR}"
+  "${DXVK_SOURCE}/include/native"
+  "${DXVK_SOURCE}/include/native/windows"
+  "${DXVK_SOURCE}/include/native/directx"
+)
+
+target_compile_definitions(NFSU2-macOS PRIVATE
+  NFS_D3D9_BACKEND
+  RECOMP_STRICT_ICALL
+  RECOMP_X87_WINDOW
+)
+
+target_link_libraries(NFSU2-macOS PRIVATE
+  dxvk_android
+  ${VULKAN_LIB}
+  SDL2::SDL2
+  pthread
+  "-framework Metal"
+  "-framework AppKit"
+  "-framework QuartzCore"
+  "-framework IOKit"
+  "-framework ForceFeedback"
+  "-framework CoreAudio"
+  "-framework AudioToolbox"
+)
+
+target_link_options(NFSU2-macOS PRIVATE
+  "-Wl,-stack_size,0x4000000"
+)

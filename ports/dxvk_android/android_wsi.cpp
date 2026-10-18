@@ -2,6 +2,17 @@
 #include "../../android/app/src/main/cpp/android_resolution.h"
 #ifdef __ANDROID__
 #include <android/native_window.h>
+#elif defined(__APPLE__)
+#define VK_USE_PLATFORM_METAL_EXT
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_metal.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
+typedef struct SDL_Window ANativeWindow;
+extern "C" void* getHostMetalLayer();
+#ifndef VK_EXT_METAL_SURFACE_EXTENSION_NAME
+#define VK_EXT_METAL_SURFACE_EXTENSION_NAME "VK_EXT_metal_surface"
+#endif
 #else
 #define VK_USE_PLATFORM_XLIB_KHR
 #include <X11/Xlib.h>
@@ -45,6 +56,8 @@ extern "C" void dxvkAndroidSetWindow(ANativeWindow* window){
 #ifdef __ANDROID__
     if(window){ANativeWindow_acquire(window);screenWidth=ANativeWindow_getWidth(window);screenHeight=ANativeWindow_getHeight(window);}
     if(currentWindow)ANativeWindow_release(currentWindow);
+#elif defined(__APPLE__)
+    if(window){int w=0,h=0;SDL_GetWindowSize(window,&w,&h);screenWidth=w;screenHeight=h;}
 #endif
     currentWindow=window;
 #ifdef __ANDROID__
@@ -53,7 +66,7 @@ extern "C" void dxvkAndroidSetWindow(ANativeWindow* window){
     currentHandle=window;
 #endif
 }
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__APPLE__)
 extern "C" ANativeWindow* dxvkCreateTestWindow(){
     XInitThreads();auto display=XOpenDisplay(nullptr);if(!display)return nullptr;
     Window window=XCreateSimpleWindow(display,DefaultRootWindow(display),0,0,1280,720,0,0,0);
@@ -67,6 +80,8 @@ std::string_view DxvkPlatformExts::getName(){return "Android WSI";}
 DxvkNameSet DxvkPlatformExts::getInstanceExtensions(){DxvkNameSet names;names.add(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef __ANDROID__
 names.add(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#elif defined(__APPLE__)
+names.add(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
 #else
 names.add(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
@@ -84,6 +99,26 @@ VkResult createSurface(HWND window,const Rc<vk::InstanceFn>& instance,VkSurfaceK
     if(!create)return VK_ERROR_EXTENSION_NOT_PRESENT;
     VkAndroidSurfaceCreateInfoKHR info{VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR};info.window=currentWindow;
     return create(instance->instance(),&info,nullptr,surface);
+#elif defined(__APPLE__)
+    void* layer = getHostMetalLayer();
+    if (layer) {
+        auto create = reinterpret_cast<PFN_vkCreateMetalSurfaceEXT>(
+            dxvkAndroidGetInstanceProcAddr()(instance->instance(), "vkCreateMetalSurfaceEXT"));
+        if (!create) {
+            create = reinterpret_cast<PFN_vkCreateMetalSurfaceEXT>(
+                vkGetInstanceProcAddr(instance->instance(), "vkCreateMetalSurfaceEXT"));
+        }
+        if (create) {
+            VkMetalSurfaceCreateInfoEXT info{VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT};
+            info.pLayer = static_cast<const CAMetalLayer*>(layer);
+            VkResult res = create(instance->instance(), &info, nullptr, surface);
+            if (res == VK_SUCCESS)
+                return VK_SUCCESS;
+        }
+    }
+    if(!SDL_Vulkan_CreateSurface(currentWindow,instance->instance(),surface))
+        return VK_ERROR_INITIALIZATION_FAILED;
+    return VK_SUCCESS;
 #else
     auto create=reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(instance->instance(),"vkCreateXlibSurfaceKHR"));
     if(!create)return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -114,6 +149,8 @@ void getWindowSize(HWND window,uint32_t* width,uint32_t* height){std::lock_guard
 void resizeWindow(HWND window,DxvkWindowState*,uint32_t width,uint32_t height){std::lock_guard<std::mutex> guard(windowMutex);
 #ifdef __ANDROID__
 if(currentWindow&&window==currentHandle)ANativeWindow_setBuffersGeometry(currentWindow,width,height,0);
+#elif defined(__APPLE__)
+if(currentWindow&&window==currentHandle){SDL_SetWindowSize(currentWindow,width,height);screenWidth=width;screenHeight=height;}
 #else
 (void)window;(void)width;(void)height;
 #endif

@@ -11,6 +11,8 @@
 #include <stdexcept>
 #ifdef __ANDROID__
 #include <android/native_window.h>
+#elif defined(__APPLE__)
+#include <SDL2/SDL.h>
 #endif
 #include <atomic>
 #include <chrono>
@@ -22,7 +24,7 @@ extern "C" void dxvkAndroidSetWindow(ANativeWindow* window);
 extern "C" HWND dxvkAndroidGetWindowHandle();
 extern "C" void dxvkAndroidSetRenderSize(uint32_t width,uint32_t height);
 void setD3D9RenderSize(unsigned width,unsigned height){dxvkAndroidSetRenderSize(width,height);}
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__APPLE__)
 extern "C" ANativeWindow* dxvkCreateTestWindow();
 extern "C" void dxvkDestroyTestWindow(ANativeWindow* window);
 #endif
@@ -146,7 +148,7 @@ void configureD3D9Bridge(void* base,uint32_t (*allocator)(uint32_t),void (*deall
     if(!std::getenv("DXVK_STATE_CACHE_PATH"))setenv("DXVK_STATE_CACHE","0",1);
     setenv("DXVK_LOG_PATH","none",1);
 #endif
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__APPLE__)
     if(std::getenv("NFS_D3D9_TEST_DISPLAY")){auto window=dxvkCreateTestWindow();if(!window)throw std::runtime_error("Xlib test display unavailable");setD3D9HostWindow(window);acknowledgeD3D9Surface(true);}
 #endif
 }
@@ -159,7 +161,7 @@ void shutdownD3D9Bridge(){
         uint32_t table;std::memcpy(&table,pointer(it->first),4);freeGuest(table);freeGuest(it->first);addresses.erase(object.native);it=objects.erase(it);
     }
     surfaceRequested=false;surfaceAvailable=false;
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__APPLE__)
     if(std::getenv("NFS_D3D9_TEST_DISPLAY")){auto window=hostWindow.load();setD3D9HostWindow(nullptr);dxvkDestroyTestWindow(window);}
 #endif
 }

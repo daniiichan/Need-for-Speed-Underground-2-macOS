@@ -37,3 +37,13 @@ src/recomp/gen_server/
 
 # Tester diagnostic reports
 NFSU2-diagnostico-*.zip
+
+# macOS build artifacts & bundles
+build_macos/
+build_test*/
+build_dxvk/
+*.app/
+*.app
+.DS_Store
+*.log
+

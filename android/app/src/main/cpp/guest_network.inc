@@ -21,6 +21,14 @@ constexpr uint32_t socketError=0xffffffffu,invalidSocket=0xffffffffu;
 constexpr uint32_t wsaEinval=10022,wsaEwouldblock=10035,wsaEnotsock=10038,wsaEfault=10014,wsaEmsgsize=10040,
     wsaEtimedout=10060,wsaEafnosupport=10047,wsaNotinitialised=10093,wsaHostNotFound=11001,wsaNoData=11004;
 constexpr char localHostName[]="nfsu2-android";
+static inline int setNonblockingCloexec(int fd) {
+    if (fd >= 0) {
+        int flags = ::fcntl(fd, F_GETFL, 0);
+        if (flags != -1) ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+    }
+    return fd;
+}
 // icmp: a Windows raw ICMP socket (ping) on an unprivileged Linux ping socket; see icmpReceive.
 struct Socket{int fd;bool guestNonBlocking=false,connecting=false,icmp=false;uint16_t icmpId=0;uint32_t recvTimeout=0,sendTimeout=0;std::set<std::string> peersLogged;
     struct Counter{uint32_t sentPackets=0,sentBytes=0,receivedPackets=0,receivedBytes=0;};
@@ -191,7 +199,11 @@ void wsaSetLastError(){lastError=arg(0);ret(0,1);}
 void socketCreate(){
     uint32_t family=arg(0),type=arg(1),protocol=arg(2);
     if(family==AF_INET&&type==3&&protocol==1){  // SOCK_RAW + IPPROTO_ICMP: ping
+#if defined(__APPLE__)
+        int fd=net::setNonblockingCloexec(::socket(AF_INET,SOCK_DGRAM,IPPROTO_ICMP));
+#else
         int fd=::socket(AF_INET,SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC,IPPROTO_ICMP);
+#endif
         if(fd<0){
             NFS_RUNTIME_LOG(ANDROID_LOG_WARN,"NFSU2","Winsock: ping ICMP no permitido por Android: %s",std::strerror(errno));
             lastError=10013;ret(net::invalidSocket,3);return;  // WSAEACCES, as for a non-admin raw socket on Windows
@@ -204,7 +216,11 @@ void socketCreate(){
         NFS_RUNTIME_LOG(ANDROID_LOG_WARN,"NFSU2","Winsock: socket(af=%u,type=%u,protocol=%u) no soportado desde %08x",family,type,protocol,read32(g_esp));
     if(family!=AF_INET){lastError=net::wsaEafnosupport;ret(net::invalidSocket,3);return;}
     if(type!=SOCK_STREAM&&type!=SOCK_DGRAM){lastError=10044;ret(net::invalidSocket,3);return;}  // WSAESOCKTNOSUPPORT
+#if defined(__APPLE__)
+    int fd=net::setNonblockingCloexec(::socket(AF_INET,int(type),int(protocol)));
+#else
     int fd=::socket(AF_INET,int(type)|SOCK_NONBLOCK|SOCK_CLOEXEC,int(protocol));
+#endif
     if(fd<0){
         NFS_RUNTIME_LOG(ANDROID_LOG_WARN,"NFSU2","Winsock: socket(af=%u,type=%u,protocol=%u) fallo: %s",family,type,protocol,std::strerror(errno));
         lastError=net::wsaError(errno);ret(net::invalidSocket,3);return;
@@ -236,7 +252,11 @@ void socketAccept(){
     uint32_t handle=arg(0),address=arg(1),lengthPointer=arg(2);
     auto* socket=net::find(handle);if(!socket){lastError=net::wsaEnotsock;ret(net::invalidSocket,3);return;}
     sockaddr_storage peer{};socklen_t length=sizeof peer;
+#if defined(__APPLE__)
+    int fd=int(net::blocking(*socket,POLLIN,0,[&](int listener){length=sizeof peer;return ssize_t(net::setNonblockingCloexec(::accept(listener,reinterpret_cast<sockaddr*>(&peer),&length)));}));
+#else
     int fd=int(net::blocking(*socket,POLLIN,0,[&](int listener){length=sizeof peer;return ssize_t(::accept4(listener,reinterpret_cast<sockaddr*>(&peer),&length,SOCK_NONBLOCK|SOCK_CLOEXEC));}));
+#endif
     if(fd<0){lastError=net::wsaError(errno);ret(net::invalidSocket,3);return;}
     if(!net::storeAddress(address,lengthPointer,peer,std::min<socklen_t>(length,16))){::close(fd);lastError=net::wsaEfault;ret(net::invalidSocket,3);return;}
     bool inherit=net::find(handle)?net::find(handle)->guestNonBlocking:false;
@@ -509,7 +529,11 @@ void wsaIoctl(){
         sockaddr_storage target;socklen_t length=net::guestAddress(arg(2),arg(3),target);
         if(!length||target.ss_family!=AF_INET){ret(net::fail(net::wsaEfault),9);return;}
         if(reinterpret_cast<sockaddr_in*>(&target)->sin_port==0)reinterpret_cast<sockaddr_in*>(&target)->sin_port=htons(9);
+#if defined(__APPLE__)
+        int probe=net::setNonblockingCloexec(::socket(AF_INET,SOCK_DGRAM,0));
+#else
         int probe=::socket(AF_INET,SOCK_DGRAM|SOCK_CLOEXEC,0);
+#endif
         if(probe<0){ret(net::failErrno(),9);return;}
         sockaddr_in local{};socklen_t localLength=sizeof local;
         bool ok=::connect(probe,reinterpret_cast<sockaddr*>(&target),length)==0&&::getsockname(probe,reinterpret_cast<sockaddr*>(&local),&localLength)==0;

@@ -173,7 +173,11 @@ void fileTime(){
     if(file==fileHandles.end()){lastError=6;ret(0,4);return;}
     if(fstat(file->second,&status)){lastError=fileError();ret(0,4);return;}
     auto ticks=[](const timespec& time){return uint64_t(time.tv_sec)*10000000ull+uint64_t(time.tv_nsec)/100u+116444736000000000ull;};
+#if defined(__APPLE__)
+    uint64_t values[3]={ticks(status.st_mtimespec),ticks(status.st_atimespec),ticks(status.st_mtimespec)};  // no creation time: use the last write
+#else
     uint64_t values[3]={ticks(status.st_mtim),ticks(status.st_atim),ticks(status.st_mtim)};  // no creation time: use the last write
+#endif
     for(unsigned i=0;i<3;++i)if(arg(1+i))std::memcpy(ptr(arg(1+i),8),&values[i],8);
     lastError=0;ret(1,4);
 }

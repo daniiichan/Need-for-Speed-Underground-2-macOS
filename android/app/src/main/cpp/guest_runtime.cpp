@@ -7,9 +7,9 @@
 #include "guest_heap.h"
 #include "runtime_log.h"
 #include "frame_pacer.h"
+#include "nfs_widescreen.h"
 #if defined(__ANDROID__) || defined(NFS_D3D9_BACKEND)
 #include "d3d9_bridge.h"
-#include "nfs_widescreen.h"
 #endif
 #include <array>
 #include <vector>
@@ -153,7 +153,7 @@ uint32_t resourceRva{},resourceSize{};
 // plain globals, not thread_local, which cost a TLS descriptor call per COM call.
 uint32_t lastImport{};
 std::string hostGameRoot;
-std::string guestLanguage="Spanish";
+std::string guestLanguage="English";
 bool guestWidescreen=true;
 std::atomic<bool> stopRequested{false};
 std::atomic<bool> guestPaused{false};
@@ -186,7 +186,7 @@ struct WaitScope {
 };
 std::atomic<int64_t> lastPresentMs{0};
 int64_t steadyMs(){return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();}
-void startStallWatch(){
+[[maybe_unused]] void startStallWatch(){
     static std::once_flag started;
     std::call_once(started,[]{std::thread([]{
         int64_t reportedFor=0;
@@ -842,12 +842,8 @@ std::string connectGuestRuntime(const char* executable) {
     State original; original.save();
     try {
         stopRequested=false;
-        // Interactive Android sessions stop through lifecycle cancellation.
-#ifdef __ANDROID__
+        // Interactive sessions stop through user exit, do not time out
         bootDeadline=std::chrono::steady_clock::time_point::max();
-#else
-        bootDeadline=std::chrono::steady_clock::now()+std::chrono::minutes(5);
-#endif
         recomp_yield_hook=checkGuestProgress;
         memory=std::make_unique<GuestMemory>();
         hostGameRoot=std::string(executable); hostGameRoot=hostGameRoot.substr(0,hostGameRoot.find_last_of('/'));
@@ -947,7 +943,10 @@ void setGuestOnlineServer(const std::string& host){std::lock_guard<MachineMutex>
 void setGuestWidescreen(bool enabled){std::lock_guard<MachineMutex> lock(machine);if(!memory)guestWidescreen=enabled;}
 void setGuestLanguage(const char* language){
     std::lock_guard<MachineMutex> lock(machine);if(memory)return;
-    for(const char* known:{"Spanish","English UK","French","German","Italian","Dutch","Swedish","Danish","Japanese","Korean","Chinese (Traditional)","Thai"})
+    for(const char* known:{"English","English UK","Spanish","French","German","Italian","Dutch","Swedish","Danish","Japanese","Korean","Chinese (Traditional)","Thai"})
         if(language&&std::strcmp(known,language)==0){guestLanguage=known;NFS_RUNTIME_LOG(ANDROID_LOG_INFO,"NFSU2","Selected guest language: %s",known);return;}
-    guestLanguage="Spanish";
+    guestLanguage="English";
+}
+void renderGuestAudio(float* output, unsigned frames) {
+    soundMixer.render(output, frames);
 }

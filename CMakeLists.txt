@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(NFSU2Recompiled C)
 
+if(APPLE)
+  include(CMakeLists_macos.txt)
+  return()
+endif()
+
 # Windows bring-up host: 32-bit, MSVC (native32's bridge is MSVC x86 inline asm).
 if(NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "Build with MSVC x86 (source scripts/vsenv.sh x86; cmake -G Ninja)")

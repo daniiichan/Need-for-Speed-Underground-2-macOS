@@ -71,7 +71,7 @@ void serviceGuestSound(){
         soundCallbackPeakUs.exchange(0,std::memory_order_relaxed),int(AAudioStream_getPerformanceMode(soundStream)));
 }
 #else
-void serviceGuestSound(){}
+[[maybe_unused]] void serviceGuestSound(){}
 bool startSoundStream(){return true;} // Host tests inspect the mixer; no physical audio output.
 #endif
 void shutdownGuestSound(){

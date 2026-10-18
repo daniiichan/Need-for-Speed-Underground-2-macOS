@@ -70,16 +70,35 @@ No Wine. No CrossOver. No virtualization. Just clean, native ARM64 & x86_64 mach
 
 ---
 
-## 🚀 Quick Start (Prebuilt Bundle)
+## 🚀 Quick Start (Prebuilt Release)
 
-1. Build or download the application bundle: **`Need for Speed Underground 2.app`**.
-2. Run the asset installer:
-   ```bash
-   ./tools/macos/install_assets.sh
-   ```
-3. A native macOS folder picker will appear. Select your original **PC version** folder of *Need for Speed: Underground 2* (the folder containing `GLOBAL/`, `CARS/`, `TRACKS/`, etc.).
-4. The installer will copy and organize the assets into the `.app` bundle using APFS copy-on-write (instant and takes zero extra disk space) and apply ad-hoc codesigning.
-5. Launch **`Need for Speed Underground 2.app`** and race!
+Getting the game running on your Mac takes less than 2 minutes:
+
+1. **Download the latest release:**  
+   Download the pre-compiled bundle from **[Releases](https://github.com/daniiichan/Need-for-Speed-Underground-2-macOS/releases)**:  
+   `Need.for.Speed.Underground.2.macOS.arm64.v1.0.0.zip`
+
+2. **Extract the ZIP:**  
+   You will get:
+   - `Need for Speed Underground 2.app`
+   - `Install Need for Speed Underground 2.command`
+
+3. **Double-click `Install Need for Speed Underground 2.command` in Finder:**  
+   - A native macOS folder picker window will automatically appear.
+   - Select your original **PC installation folder** of *Need for Speed: Underground 2* (the directory containing `GLOBAL/`, `CARS/`, `TRACKS/`, `MOVIES/`, `SOUND/`, etc.).
+   - The installer will:
+     - Clear macOS Gatekeeper quarantine attributes (`xattr -cr`).
+     - Import and organize all game assets into `Need for Speed Underground 2.app` using **APFS copy-on-write** (instant cloning, zero duplicate disk space).
+     - Verify file integrity and apply ad-hoc code signatures.
+
+4. **Launch `Need for Speed Underground 2.app` and hit the streets! 🏁**
+
+> [!TIP]
+> **Command-Line Installation:**  
+> If you prefer using Terminal, you can also run the installer directly:
+> ```bash
+> ./tools/macos/install_assets.sh "/path/to/NFS Underground 2"
+> ```
 
 ---
 
@@ -136,17 +155,21 @@ Supports Xbox Wireless, PlayStation DualSense / DualShock 4, and Nintendo Switch
 ---
 
 ## 📂 Project Structure
-
+ 
 ```text
-├── android/            # Shared runtime, memory management & audio shims
+├── patches/
+│   └── pcrecomp/       # Upstream x86 lifting patches
 ├── ports/
-│   └── dxvk_android/   # DXVK Native with MoltenVK / Apple Metal WSI backend
+│   └── dxvk/           # DXVK Native with MoltenVK / Apple Metal WSI backend
+├── resources/          # High-resolution Retina icon assets (AppIcon.png)
 ├── src/
-│   ├── host/           # Native macOS host entry point (main_macos.cpp)
-│   └── runtime/        # Widescreen fix, overrides, and shims
-├── third_party/        # pcrecomp runtime and DXVK Native headers
+│   ├── guest/          # Guest x86 runtime, D3D9 bridge, memory, thread & audio shims
+│   ├── host/           # Native macOS host entry point (main_macos.cpp, SDL2 event loop)
+│   ├── recomp/         # Lifted C code functions and imports
+│   └── runtime/        # Widescreen fix, camera FOV overrides, and engine shims
+├── third_party/        # Bundled pcrecomp runtime and DXVK Native headers
 ├── tools/
-│   └── macos/          # bundle.sh & install_assets.sh scripts
+│   └── macos/          # Double-clickable .command installer, bundle.sh & release packager
 └── CMakeLists_macos.txt # Native macOS build configuration
 ```
 
